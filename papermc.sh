@@ -3,47 +3,44 @@
 # Enter server directory
 cd papermc
 
-# Set nullstrings back to 'latest'
-: ${MC_VERSION:='latest'}
+# Set Minecraft version to 1.20.4 and Paper build to 'latest'
+: ${MC_VERSION:='1.20.4'}
 : ${PAPER_BUILD:='latest'}
 
 # Lowercase these to avoid 404 errors on wget
 MC_VERSION="${MC_VERSION,,}"
 PAPER_BUILD="${PAPER_BUILD,,}"
 
-# Get version information and build download URL and jar name
-URL='https://papermc.io/api/v2/projects/paper'
-if [[ $MC_VERSION == latest ]]
-then
-  # Get the latest MC version
-  MC_VERSION=$(wget -qO - "$URL" | jq -r '.versions[-1]') # "-r" is needed because the output has quotes otherwise
+# Base URL for PaperMC API
+URL='https://api.papermc.io/v2/projects/paper'
+
+# Build the URL for the specified version (1.20.4)
+VERSION_URL="${URL}/versions/${MC_VERSION}"
+
+# Get the latest build if not specified
+if [[ $PAPER_BUILD == latest ]]; then
+  PAPER_BUILD=$(wget -qO - "$VERSION_URL" | jq -r '.builds[-1]')
 fi
-URL="${URL}/versions/${MC_VERSION}"
-if [[ $PAPER_BUILD == latest ]]
-then
-  # Get the latest build
-  PAPER_BUILD=$(wget -qO - "$URL" | jq '.builds[-1]')
-fi
+
+# Construct the JAR file name and download URL
 JAR_NAME="paper-${MC_VERSION}-${PAPER_BUILD}.jar"
-URL="${URL}/builds/${PAPER_BUILD}/downloads/${JAR_NAME}"
+DOWNLOAD_URL="${VERSION_URL}/builds/${PAPER_BUILD}/downloads/${JAR_NAME}"
 
-# Update if necessary
-if [[ ! -e $JAR_NAME ]]
-then
-  # Remove old server jar(s)
+# Download the PaperMC server jar if it's not already present
+if [[ ! -e $JAR_NAME ]]; then
+  # Remove any existing JAR files
   rm -f *.jar
-  # Download new server jar
-  wget "$URL" -O "$JAR_NAME"
+  # Download the new server jar
+  wget "$DOWNLOAD_URL" -O "$JAR_NAME"
 fi
 
-# Update eula.txt with current setting
+# Ensure the EULA is accepted
 echo "eula=${EULA:-false}" > eula.txt
 
-# Add RAM options to Java options if necessary
-if [[ -n $MC_RAM ]]
-then
+# Set memory allocation options if specified
+if [[ -n $MC_RAM ]]; then
   JAVA_OPTS="-Xms${MC_RAM} -Xmx${MC_RAM} $JAVA_OPTS"
 fi
 
-# Start server
+# Start the Minecraft server
 exec java -server $JAVA_OPTS -jar "$JAR_NAME" nogui
