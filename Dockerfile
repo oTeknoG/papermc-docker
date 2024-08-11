@@ -4,7 +4,7 @@
 FROM alpine:latest
 
 # Environment variables
-ENV MC_VERSION="latest" \
+ENV MC_VERSION="1.20.4" \
     PAPER_BUILD="latest" \
     EULA="false" \
     MC_RAM="" \
